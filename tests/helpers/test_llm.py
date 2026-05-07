@@ -672,7 +672,11 @@ async def test_assist_api_prompt(
     )
     no_timer_prompt = "This device is not able to start timers."
 
-    location_prompt = (
+    location_prompt_no_device = (
+        "When a request names a generic device without an area, "
+        "ask the user to specify which area they mean before targeting."
+    )
+    location_prompt_with_device = (
         "When a request names a generic device without an area, "
         "treat it as the user's current area and call "
         "`GetCurrentLocation` to resolve it before targeting."
@@ -692,7 +696,7 @@ For general knowledge questions not about the home: Answer truthfully from inter
     api = await llm.async_get_api(hass, "assist", llm_context)
     assert api.api_prompt == (
         f"""{first_part_prompt}
-{location_prompt}
+{location_prompt_no_device}
 {no_timer_prompt}
 {dynamic_context_prompt}
 {stateless_exposed_entities_prompt}"""
@@ -708,13 +712,13 @@ For general knowledge questions not about the home: Answer truthfully from inter
     }
 
     # Fake that request is made from a specific device ID with an area.
-    # The prompt no longer changes — area/floor are now exposed via the
-    # GetCurrentLocation tool to keep the prompt cacheable across speakers.
+    # The static area/floor reference is replaced with a directive to call
+    # GetCurrentLocation, keeping the prompt cacheable across speakers.
     llm_context.device_id = device.id
     api = await llm.async_get_api(hass, "assist", llm_context)
     assert api.api_prompt == (
         f"""{first_part_prompt}
-{location_prompt}
+{location_prompt_with_device}
 {no_timer_prompt}
 {dynamic_context_prompt}
 {stateless_exposed_entities_prompt}"""
@@ -732,7 +736,7 @@ For general knowledge questions not about the home: Answer truthfully from inter
     api = await llm.async_get_api(hass, "assist", llm_context)
     assert api.api_prompt == (
         f"""{first_part_prompt}
-{location_prompt}
+{location_prompt_with_device}
 {no_timer_prompt}
 {dynamic_context_prompt}
 {stateless_exposed_entities_prompt}"""
@@ -753,7 +757,7 @@ For general knowledge questions not about the home: Answer truthfully from inter
     # The no_timer_prompt is gone
     assert api.api_prompt == (
         f"""{first_part_prompt}
-{location_prompt}
+{location_prompt_with_device}
 {dynamic_context_prompt}
 {stateless_exposed_entities_prompt}"""
     )
